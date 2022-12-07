@@ -8,7 +8,6 @@ import pickle
 import sys
 import os
 
-from sklearn.neural_network import MLPRegressor
 from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor
 from sklearn.model_selection import GridSearchCV, KFold
 from sklearn import preprocessing
@@ -58,7 +57,7 @@ if __name__ == '__main__':
     random_forest.fit(feature_scaler.transform(df_full[train][features]), predictor_scaler.transform(np.array(df_full[train][predictor]).reshape(-1, 1) ))
     print(random_forest.best_params_)    
     
-    pickle.dump([random_forest, features, predictor, feature_scaler, predictor_scaler, df_full], 
+    pickle.dump([random_forest, features, predictor, feature_scaler, predictor_scaler], 
                 open(f'{model_dir}{model}_{wind}_{snap}_{lines_short[lines.index(line)]}_lines_RF_{predictor}.model', 'wb'))
 
     # Predict physical conditions from trained model

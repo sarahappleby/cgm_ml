@@ -11,6 +11,7 @@ Usage:
 import h5py
 import numpy as np
 import pandas as pd
+import pygad as pg
 import pickle
 import sys
 
