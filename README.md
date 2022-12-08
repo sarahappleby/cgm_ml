@@ -31,13 +31,8 @@ Trained models are saved in the `models' directory; see plotting routines for ex
 Since the random forest models make predictions that are in general too concentrated towards the mean, we have two methods of post-processsing the
 predictions to reproduce the intrinsic scatter in the truth data.
 
-To directly add extra scatter:
 ```
-python scale_predictions_scatter.py <simba model> <simba wind> <simba snapshot> <pygad line>
-```
-To map onto the shape of the truth data:
-```
-python scale_predictions_trans.py <simba model> <simba wind> <simba snapshot> <pygad line>
+python scale_predictions.py <simba model> <simba wind> <simba snapshot> <pygad line>
 ```
 
 ## Plotting
