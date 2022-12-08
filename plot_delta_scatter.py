@@ -8,7 +8,6 @@ import seaborn as sns
 
 import numpy as np
 import pandas as pd
-import pygad as pg
 import pickle
 import sys
 
@@ -43,7 +42,7 @@ if __name__ == '__main__':
                   r'${\rm SiIII}\ 1206$', r'${\rm CIV}\ 1548$', r'${\rm OVI}\ 1031$']
 
     features = ['N', 'b', 'EW', 'dv', 'r_perp', 'mass', 'ssfr', 'kappa_rot'] 
-    predictors = ['rho', 'T', 'Z']
+    predictors = ['delta_rho', 'T', 'Z']
 
     features_pretty = [r'${\rm log} N$', r'$b$', r'${\rm log\ EW}$', 
                        r'${\rm d}v$', r'$f_{r200}$', r'${\rm log} M_\star$',
@@ -52,21 +51,15 @@ if __name__ == '__main__':
     predictors_pretty = [r'${\rm log}\ \delta$', r'${\rm log}\ T$', r'${\rm log}\ Z$']
 
     limit_dict = {}
-    limit_dict['rho'] = [[0, 4], [2, 4], [2, 4], [1.5, 4], [1, 3.5], [0.5, 3.5]]
+    limit_dict['delta_rho'] = [[0, 4], [2, 4], [2, 4], [1.5, 4], [1, 3.5], [0.5, 3.5]]
     limit_dict['T'] = [[3, 6.5], [3.5, 5], [4, 5], [4, 5], [4, 5.5], [4, 6]]
     limit_dict['Z'] = [[-4, 1], [-1, 1], [-1, 1], [-1, 1], [-1, 1], [-1, 1]]
-
-    snapfile = f'/disk04/sapple/cgm/absorption/ml_project/data/samples/{model}_{wind}_{snap}.hdf5'
-    s = pg.Snapshot(snapfile)
-    redshift = s.redshift
-    rho_crit = float(s.cosmology.rho_crit(z=redshift).in_units_of('g/cm**3'))
-    cosmic_rho = rho_crit * float(s.cosmology.Omega_b)
 
     lines = ["H1215", "MgII2796", "CII1334", "SiIII1206", "CIV1548", "OVI1031"]
     lines_short = ['HI', 'MgII', 'CII', 'SiIII', 'CIV', 'OVI']
     zsolar = [0.0134, 7.14e-4, 2.38e-3, 6.71e-4, 2.38e-3, 5.79e-3]
 
-    model_dir = f'/disk04/sapple/cgm/absorption/ml_project/train_spectra/models/'
+    model_dir = './models/'
 
     cmap = sns.color_palette("flare_r", as_cmap=True)
     cmap = sns.diverging_palette(220, 20, as_cmap=True)
@@ -86,33 +79,41 @@ if __name__ == '__main__':
             limits = limit_dict[pred][lines.index(line)]
             points = np.repeat(limits, 2).reshape(2, 2)
 
-            gridsearch, _, _, feature_scaler, predictor_scaler, df_full = \
+            # Load in the random forest gridsearch
+            gridsearch, _, _, feature_scaler, predictor_scaler = \
                         pickle.load(open(f'{model_dir}{model}_{wind}_{snap}_{lines_short[lines.index(line)]}_lines_RF_{pred}.model', 'rb'))
+            df_full = pd.read_csv(f'data/{model}_{wind}_{snap}_{line}_lines.csv') 
             train = df_full['train_mask']
 
+            # Get the predictions from the full random forest model (using all features)
             conditions_pred = predictor_scaler.inverse_transform(np.array( gridsearch.predict(feature_scaler.transform(df_full[~train][features]))).reshape(-1, 1) )
             conditions_true = pd.DataFrame(df_full[~train],columns=[pred]).values
             scatter_orig = get_prediction_scatter(conditions_true.flatten(), conditions_pred.flatten(), points)
 
             for k in range(len(features)):
             
+                # Iteratively choose all features but one 
                 features_use = np.delete(features, k)
                 idx = np.delete(np.arange(len(features)), k)
 
+                # Scale the features and predictors to mean 0 and sigma 1 
                 feature_scaler = preprocessing.StandardScaler().fit(df_full[train][features_use])
                 predictor_scaler = preprocessing.StandardScaler().fit(np.array(df_full[train][pred]).reshape(-1, 1) )
 
+                # Train a random forest model using all features but one, and the best parameters from the full grid search
                 random_forest = RandomForestRegressor(n_estimators=gridsearch.best_params_['n_estimators'],
                                                       min_samples_split=gridsearch.best_params_['min_samples_split'],
                                                       min_samples_leaf=gridsearch.best_params_['min_samples_leaf'],)
                 random_forest.fit(feature_scaler.transform(df_full[train][features_use]), predictor_scaler.transform(np.array(df_full[train][pred]).reshape(-1, 1) ))
 
+                # Get the predictions from the new random forest model
                 conditions_pred = predictor_scaler.inverse_transform(np.array( random_forest.predict(feature_scaler.transform(df_full[~train][features_use]))).reshape(-1, 1) )
                 conditions_true = pd.DataFrame(df_full[~train],columns=[pred]).values
 
                 conditions_pred = conditions_pred.flatten()
                 conditions_true = conditions_true.flatten()
 
+                # Compute the change in perpendicular scatter compared with the original random forest model
                 delta_scatter[l][p][k] = get_prediction_scatter(conditions_true, conditions_pred, points) - scatter_orig
 
         scatter_use = delta_scatter[l]

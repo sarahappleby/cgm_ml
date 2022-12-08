@@ -8,7 +8,6 @@ from matplotlib.lines import Line2D
 
 import numpy as np
 import pickle
-import pygad as pg
 import pandas as pd
 import seaborn as sns
 import sys
@@ -18,6 +17,30 @@ from sklearn.metrics import r2_score, explained_variance_score, mean_squared_log
 
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif', size=16)
+
+
+def get_dperp(data, pred, points, reference='', compare='_pred'):
+    coords = np.transpose(np.array([data[f'{pred}{reference}'], data[f'{pred}{compare}']]))
+    d_perp = np.cross(points[1] - points[0], points[0] - coords) / np.linalg.norm(points[1]-points[0])
+    return d_perp
+
+
+def get_scores(err, data, pred, points, reference='', compare='_pred',):
+
+    scores = {}
+    scores['Predictor'] = pred
+    scores['Pearson'] = round(pearsonr(data[f'{pred}{reference}'], data[f'{pred}{compare}'])[0], 5)
+
+    d_perp = get_dperp(data, pred, points, reference=reference, compare=compare)
+    scores['sigma_perp'] = round(np.nanstd(d_perp), 5)
+
+    for _scorer in [r2_score, explained_variance_score, mean_squared_error]:
+        scores[_scorer.__name__] = float(_scorer(data[f'{pred}{reference}'],
+                                         data[f'{pred}{compare}'], multioutput='raw_values'))
+    err = err.append(scores, ignore_index=True)
+
+    return err
+
 
 if __name__ == '__main__':
 
@@ -32,7 +55,6 @@ if __name__ == '__main__':
     lines_short = ['HI', 'MgII', 'CII', 'SiIII', 'CIV', 'OVI']
     Nlabels = [r'${\rm log }(N\ {\rm HI} / {\rm cm}^{-2})$', r'${\rm log }(N\ {\rm MgII} / {\rm cm}^{-2})$', r'${\rm log }(N\ {\rm CII} / {\rm cm}^{-2})$', 
                r'${\rm log }(N\ {\rm SiIII} / {\rm cm}^{-2})$', r'${\rm log }(N\ {\rm CIV} / {\rm cm}^{-2})$', r'${\rm log }(N\ {\rm OVI} / {\rm cm}^{-2})$']
-    x = [0.73, 0.67, 0.7, 0.68, 0.68, 0.69]
     x = [0.05] * 6
 
     height = 6 
@@ -45,26 +67,20 @@ if __name__ == '__main__':
     min_T = [3, 3.5, 4, 4, 4, 4]
     max_T = [6, 5, 5, 5, 5.5, 6]
 
-    snapfile = f'/disk04/sapple/cgm/absorption/ml_project/data/samples/{model}_{wind}_{snap}.hdf5'
-    s = pg.Snapshot(snapfile)
-    redshift = s.redshift
-    rho_crit = float(s.cosmology.rho_crit(z=redshift).in_units_of('g/cm**3'))
-    cosmic_rho = rho_crit * float(s.cosmology.Omega_b)
+    plot_dir = './plots/'
+    model_dir = './models/'
+    data_dir = './data/'
 
-    plot_dir = '/disk04/sapple/cgm/absorption/ml_project/train_spectra/plots/'
-    model_dir = f'/disk04/sapple/cgm/absorption/ml_project/train_spectra/models/'
-    data_dir = f'/disk04/sapple/cgm/absorption/ml_project/train_spectra/data/'
+    predictors = ['delta_rho', 'T']
 
-    predictors = ['rho', 'T']
-
-    if mode == 'orig':
+    if mode == 'orig': # for plotting the original predictions
         pred_str = '_pred'
         pred_label = 'Prediction'
-    elif mode == 'scatter':
-        pred_str = '_new'
+    elif mode == 'scatter': # for plotting the predictions with added scatter
+        pred_str = '_scatter'
         pred_label = 'Prediction+Scatter'
-    elif mode == 'trans':
-        pred_str = '_pred_trans_inv'
+    elif mode == 'trans': #  for plotting the transformed predictions
+        pred_str = '_trans_inv'
         pred_label = 'Transformed Prediction'
 
     hist_labels = ['Truth', pred_label]
@@ -80,58 +96,19 @@ if __name__ == '__main__':
         T_bins = np.arange(min_T[l], max_T[l]+dT, dT)
 
         data = pd.DataFrame()       
-        diff = {pred: None for pred in predictors}
         err = pd.DataFrame(columns=['Predictor', 'Pearson', 'r2_score', 'explained_variance_score', 'mean_squared_error'])
 
         for p, pred in enumerate(predictors):
 
             if pred == 'rho':
-                pred_use = 'delta_rho'
                 points = np.repeat(np.array([min_delta[l], max_delta[l]]), 2).reshape(2, 2)
             else:
-                pred_use = pred
                 points = np.repeat(np.array([min_T[l], max_T[l]]), 2).reshape(2, 2)
 
-            if mode == 'orig':
-                random_forest, features, _, feature_scaler, predictor_scaler, df_full = \
-                            pickle.load(open(f'{model_dir}{model}_{wind}_{snap}_{lines_short[lines.index(line)]}_lines_RF_{pred}.model', 'rb'))
+            data = pd.read_csv(f'{data_dir}{model}_{wind}_{snap}_{line}_lines_scaled.csv')
+            err = get_scores(err, data, pred, points, reference='', compare=pred_str)
 
-                train = df_full['train_mask']
-                data[pred] = df_full[~train][pred]
-                data[f'{pred}_pred'] = predictor_scaler.inverse_transform( np.array(random_forest.predict(feature_scaler.transform(df_full[~train][features])).reshape(-1, 1) )).flatten()
-        
-                if pred == 'rho':
-                    data[pred] -= np.log10(cosmic_rho)
-                    data[f'{pred}_pred'] -= np.log10(cosmic_rho)
-                    data = data.rename(columns={'rho':'delta_rho', 'rho_pred':'delta_rho_pred'})
-
-                del df_full
-            
-            elif mode == 'scatter':
-                data = pd.read_csv(f'{data_dir}{model}_{wind}_{snap}_{line}_lines_scattered.csv')
-                data = data.rename(columns={'rho':'delta_rho', 'rho_pred':'delta_rho_pred', 'rho_new':'delta_rho_new'}) 
-
-            elif mode == 'trans':
-                data = pd.read_csv(f'{data_dir}{model}_{wind}_{snap}_{line}_lines_trans.csv')
-
-
-            diff[pred] = np.array(data[pred_use]) - np.array(data[f'{pred_use}{pred_str}'])
-
-            coords = np.transpose(np.array([data[pred_use], data[f'{pred_use}{pred_str}']]))
-            d_perp = np.cross(points[1] - points[0], points[0] - coords) / np.linalg.norm(points[1]-points[0])
-
-            scores = {}
-            scores['Predictor'] = pred_use
-            scores['Pearson'] = round(pearsonr(data[pred_use],data[f'{pred_use}{pred_str}'])[0], 5)
-            scores['sigma_perp'] = round(np.nanstd(d_perp), 5)
-            for _scorer in [r2_score, explained_variance_score, mean_squared_error]:
-                scores[_scorer.__name__] = float(_scorer(data[pred_use],
-                                                   data[f'{pred_use}{pred_str}'], multioutput='raw_values'))
-            err = err.append(scores, ignore_index=True)
-
-        print(line)
-        print(err)
-        print('\n')
+        print(f'{line}\n{err}\n')
 
         data.reset_index(drop=True, inplace=True)
 
@@ -202,6 +179,6 @@ if __name__ == '__main__':
                                    bbox=dict(boxstyle="round", fc="w", ec='dimgrey', lw=0.75))
 
         plt.tight_layout()
-        plt.savefig(f'{plot_dir}{model}_{wind}_{snap}_{lines[l]}_deltaT_pred_{mode}.png', dpi=300)
+        plt.savefig(f'{plot_dir}{model}_{wind}_{snap}_{lines_short[lines.index(line)]}_deltaT_pred_{mode}.png', dpi=300)
         plt.close()
 

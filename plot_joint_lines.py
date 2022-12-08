@@ -32,7 +32,7 @@ if __name__ == '__main__':
         os.mkdir(plot_dir)
 
     # Set the target predictors we want and the ion names
-    predictors = ['rho', 'T', 'Z']
+    predictors = ['delta_rho', 'T', 'Z']
     lines = ["H1215", "MgII2796", "CII1334", "SiIII1206", "CIV1548", "OVI1031"]
     lines_short = ['HI', 'MgII', 'CII', 'SiIII', 'CIV', 'OVI'] 
 
@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
     # For plotting; set the x and y limits for each ion
     limit_dict = {}
-    limit_dict['rho'] = [[0, 4], [2, 4], [2, 4], [1.5, 4], [1, 3.5], [0.5, 3.5]]
+    limit_dict['delta_rho'] = [[0, 4], [2, 4], [2, 4], [1.5, 4], [1, 3.5], [0.5, 3.5]]
     limit_dict['T'] = [[3, 6.5], [3.5, 5], [4, 5], [4, 5], [4, 5.5], [4, 6]]
     limit_dict['Z'] = [[-4, 1], [-1, 1], [-1, 1], [-1, 1], [-1, 1], [-1, 1]]
     nbins = 20
@@ -56,11 +56,12 @@ if __name__ == '__main__':
 
     # For plotting; set the location of the colorbar for each predictor
     x_dict = {}
-    x_dict['rho'] = [0.18, 0.2, 0.2, 0.18, 0.18, 0.18]
+    x_dict['delta_rho'] = [0.18, 0.2, 0.2, 0.18, 0.18, 0.18]
     x_dict['T'] = [0.18, 0.18, 0.18, 0.18, 0.18, 0.2]
     x_dict['Z'] = [0.18, 0.23, 0.23, 0.23, 0.23, 0.23]
 
     diff = {pred: None for pred in predictors}
+    data = pd.DataFrame()
     err = pd.DataFrame(columns=['Predictor', 'Pearson', 'r2_score', 'explained_variance_score', 'mean_squared_error'])
 
     for p, pred in enumerate(predictors):
@@ -70,40 +71,41 @@ if __name__ == '__main__':
         points = np.repeat(limits, 2).reshape(2, 2)
 
         # Load in the random forest model
-        random_forest, features, _, feature_scaler, predictor_scaler, df_full = \
+        random_forest, features, _, feature_scaler, predictor_scaler = \
                     pickle.load(open(f'{model_dir}{model}_{wind}_{snap}_{lines_short[lines.index(line)]}_lines_RF_{pred}.model', 'rb'))
+        
+        # Read in the training data
+        df_full = pd.read_csv(f'data/{model}_{wind}_{snap}_{line}_lines.csv') 
         train = df_full['train_mask']
-        pred_str = pred+'_pred'
 
-        # 
-        test_data = df_full[~train]; del df_full
-        test_data = test_data.reset_index(drop=True)
-        prediction = pd.DataFrame(predictor_scaler.inverse_transform( np.array(random_forest.predict(feature_scaler.transform(test_data[features])).reshape(-1, 1) )),
-                                  columns=[pred+'_pred'])
-        data = pd.concat([test_data[pred], prediction], axis=1); del prediction
+        # Get the predictions from the random forest 
+        prediction = np.array(random_forest.predict(feature_scaler.transform(df_full[~train][features])).reshape(-1, 1) )
+        prediction = predictor_scaler.inverse_transform(prediction )
+        data[f'{pred}_pred'] = pd.DataFrame(prediction, columns=[f'{pred}_pred'])
+        data[pred] = df_full[~train][pred].values
+        del prediction, df_full
 
-        if pred == 'rho':
-            data[pred] -= np.log10(cosmic_rho)
-            data[f'{pred}_pred'] -= np.log10(cosmic_rho)
-
+        # Convert metallicities to solar units
         if pred == 'Z':
             data[pred] -= np.log10(zsolar[lines.index(line)])
             data[f'{pred}_pred'] -= np.log10(zsolar[lines.index(line)])
 
+        # Compute the perpendicular distance from the 1:1 line
         diff[pred] = np.array(data[pred]) - np.array(data[f'{pred}_pred'])
-
         coords = np.transpose(np.array([data[pred], data[f'{pred}_pred']]))
         d_perp = np.cross(points[1] - points[0], points[0] - coords) / np.linalg.norm(points[1]-points[0])
 
+        # Compute the prediction accuracy metrics
         scores = {}
         scores['Predictor'] = pred
-        scores['Pearson'] = round(pearsonr(data[pred],data[pred+'_pred'])[0], 5)
+        scores['Pearson'] = round(pearsonr(data[pred],data[f'{pred}_pred'])[0], 5)
         scores['sigma_perp'] = round(np.nanstd(d_perp), 5)
         for _scorer in [r2_score, explained_variance_score, mean_squared_error]:
             scores[_scorer.__name__] = float(_scorer(data[pred],
-                                               data[pred_str], multioutput='raw_values'))
+                                               data[f'{pred}_pred'], multioutput='raw_values'))
         err = err.append(scores, ignore_index=True) 
 
+        # Making the joint plots
         dx = (limits[1] - limits[0]) / nbins
         bins = np.arange(limits[0], limits[1]+dx, dx)
 
@@ -136,7 +138,7 @@ if __name__ == '__main__':
                                  cax=cax)
         cbar.set_label(r'$n$', rotation='horizontal')
 
-        plt.savefig(f'{plot_dir}/{model}_{wind}_{snap}_{lines_short[lines.index(line)]}_lines_RF_joint_single_{pred}.png')
+        plt.savefig(f'{plot_dir}/{model}_{wind}_{snap}_{lines_short[lines.index(line)]}_lines_RF_joint_{pred}.png')
         plt.close()
     
     print(err)

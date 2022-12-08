@@ -54,27 +54,34 @@ if __name__ == '__main__':
 
     for p, pred in enumerate(predictors):
 
-        gridsearch, _, _, _, _, df_full = \
+        # Load in the random forest gridsearch and the absorber data
+        gridsearch, _, _, _, _ = \
                     pickle.load(open(f'{model_dir}{model}_{wind}_{snap}_{lines_short[lines.index(line)]}_lines_RF_{pred}.model', 'rb'))
+        df_full = pd.read_csv(f'data/{model}_{wind}_{snap}_{line}_lines.csv')
         train = df_full['train_mask']
 
         err = pd.DataFrame(columns=['Feature removed', 'Pearson', 'r2_score', 'explained_variance_score', 'mean_squared_error'])
 
         for i in range(len(features)):
-            
+           
+            # Iteratively choose all features but one
             features_use = np.delete(features, i)
             idx = np.delete(np.arange(len(features)), i)
 
+            # Scale the features and predictors to mean 0 and sigma 1
             feature_scaler = preprocessing.StandardScaler().fit(df_full[train][features_use])
             predictor_scaler = preprocessing.StandardScaler().fit(np.array(df_full[train][pred]).reshape(-1, 1) )
 
+            # Train a random forest model using the best parameters from the full grid search and all but one of the features
             random_forest = RandomForestRegressor(n_estimators=gridsearch.best_params_['n_estimators'],
                                                   min_samples_split=gridsearch.best_params_['min_samples_split'],
                                                   min_samples_leaf=gridsearch.best_params_['min_samples_leaf'],)
             random_forest.fit(feature_scaler.transform(df_full[train][features_use]), predictor_scaler.transform(np.array(df_full[train][pred]).reshape(-1, 1) ))
 
+            # Get the feature importances
             importance[p][i][idx] = random_forest.feature_importances_
 
+            # Evaluate the performance of the model
             conditions_pred = predictor_scaler.inverse_transform(np.array( random_forest.predict(feature_scaler.transform(df_full[~train][features_use]))).reshape(-1, 1) )
             conditions_true = pd.DataFrame(df_full[~train],columns=[pred]).values
 
@@ -96,7 +103,6 @@ if __name__ == '__main__':
         print(pred, err)
 
         # Plot importance matrix
-
         importance_use = np.transpose(importance[p])
         mask = importance_use == 0
 
