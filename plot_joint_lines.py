@@ -41,10 +41,11 @@ if __name__ == '__main__':
 
     # For plotting; set the x and y limits for each ion
     limit_dict = {}
-    limit_dict['delta_rho'] = [[0, 4], [2, 4], [2, 4], [1.5, 4], [1, 3.5], [0.5, 3.5]]
-    limit_dict['T'] = [[3, 6.5], [3.5, 5], [4, 5], [4, 5], [4, 5.5], [4, 6]]
-    limit_dict['Z'] = [[-4, 1], [-1, 1], [-1, 1], [-1, 1], [-1, 1], [-1, 1]]
+    limit_dict['rho'] = [[0, 4], [2, 4], [2, 4], [1.8, 3.8], [1, 3.5], [0.5, 3.25]]
+    limit_dict['T'] = [[3, 6], [3.5, 4.75], [4, 5], [4, 5], [4, 5.3], [4.25, 6]]
+    limit_dict['Z'] = [[-4, 1], [-0.75, 0.75], [-0.75, 0.75], [-0.75, 0.75], [-0.75, 0.75], [-0.75, 0.75]]
     nbins = 20
+    gridsize = 25
 
     # For plotting; set the x and y labels for each predictor
     xlabels = [r'${\rm log}\ \delta_{\rm True}$', 
@@ -112,8 +113,9 @@ if __name__ == '__main__':
         mask = (data[pred] > bins[0]) & (data[pred] < bins[-1])
         diff_within = np.sum(diff[pred] <= 0.2) / len(diff[pred])
 
-        g = sns.jointplot(data=data[mask], x=pred, y=f'{pred}_pred', 
-                          kind="hex", joint_kws=dict(bins='log', alpha=0.8), xlim=[limits[0], limits[1]], ylim=[limits[0], limits[1]],
+        g = sns.jointplot(data=data[mask], x=pred, y=f'{pred}_pred', kind="hex",
+                          joint_kws=dict(bins='log', alpha=0.8, extent=(limits[0], limits[1], limits[0], limits[1]), gridsize=gridsize),
+                          xlim=[limits[0], limits[1]], ylim=[limits[0], limits[1]],
                           marginal_ticks=True, marginal_kws=dict(bins=bins, fill=False, stat='probability'))
 
         g.figure.axes[0].plot(bins, bins, ls=':', lw=2, c='k')
