@@ -135,7 +135,7 @@ if __name__ == '__main__':
         grid.ax_marg_y.set_xticks([0, 0.1])
 
         contour = sns.kdeplot(data=data, x='delta_rho', y='T', ax=grid.ax_joint, legend=False, cumulative=False, linewidths=1)
-        im = grid.ax_joint.scatter(data[f'delta_rho{pred_str}'], data[f'T{pred_str}'], c=np.log10(data['error']), cmap=cmap, s=4, vmin=-2, vmax=1)
+        im = grid.ax_joint.scatter(data[f'delta_rho{pred_str}'], data[f'T{pred_str}'], c=np.log10(data['error']), cmap=cmap, s=5, vmin=-1.25, vmax=-0.5)
 
         grid.set_axis_labels(xlabel=r'${\rm log }\delta$', 
                              ylabel=r'${\rm log } (T / {\rm K})$')

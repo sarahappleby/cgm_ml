@@ -27,7 +27,7 @@ def get_prediction_scatter(data, predicted_data, points):
     
     coords = np.transpose(np.array([data, predicted_data]))
     d_perp = np.cross(points[1] - points[0], points[0] - coords) / np.linalg.norm(points[1]-points[0])
-    return np.nanstd(d_perp)
+    return np.nanstd(d_perp) / np.nanstd(data)
 
 
 if __name__ == '__main__':
@@ -119,10 +119,10 @@ if __name__ == '__main__':
         scatter_use = delta_scatter[l]
 
         if (l == 0):
-            g = sns.heatmap(scatter_use, cmap=cmap, vmin=-0.05, vmax=0.05, annot=False, ax=ax[i][j], square=True, linewidths=.5, 
-                            cbar_ax=cax, cbar_kws={'label':r'$\Delta \sigma_\perp$', 'orientation':'horizontal'})
+            g = sns.heatmap(scatter_use, cmap=cmap, vmin=-0.05, vmax=0.075, annot=False, ax=ax[i][j], square=True, linewidths=.5, center=0,
+                            cbar_ax=cax, cbar_kws={'label':r'$\Delta \sigma_{\perp\ {\rm norm}}$', 'orientation':'horizontal'})
         else:
-            g = sns.heatmap(scatter_use, cmap=cmap, vmin=-0.05, vmax=0.05, annot=False, ax=ax[i][j], square=True, linewidths=.5,
+            g = sns.heatmap(scatter_use, cmap=cmap, vmin=-0.05, vmax=0.075, annot=False, ax=ax[i][j], square=True, linewidths=.5, center=0,
                             cbar=False)
 
         ax[i][j].set_title(plot_lines[l])

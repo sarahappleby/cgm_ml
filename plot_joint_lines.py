@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
     # For plotting; set the x and y limits for each ion
     limit_dict = {}
-    limit_dict['rho'] = [[0, 4], [2, 4], [2, 4], [1.8, 3.8], [1, 3.5], [0.5, 3.25]]
+    limit_dict['delta_rho'] = [[0, 4], [2, 4], [2, 4], [1.8, 3.8], [1, 3.5], [0.5, 3.25]]
     limit_dict['T'] = [[3, 6], [3.5, 4.75], [4, 5], [4, 5], [4, 5.3], [4.25, 6]]
     limit_dict['Z'] = [[-4, 1], [-0.75, 0.75], [-0.75, 0.75], [-0.75, 0.75], [-0.75, 0.75], [-0.75, 0.75]]
     nbins = 20
@@ -95,15 +95,17 @@ if __name__ == '__main__':
         diff[pred] = np.array(data[pred]) - np.array(data[f'{pred}_pred'])
         coords = np.transpose(np.array([data[pred], data[f'{pred}_pred']]))
         d_perp = np.cross(points[1] - points[0], points[0] - coords) / np.linalg.norm(points[1]-points[0])
+        sigma_truth = np.nanstd(data[pred])
 
         # Compute the prediction accuracy metrics
         scores = {}
         scores['Predictor'] = pred
         scores['Pearson'] = round(pearsonr(data[pred],data[f'{pred}_pred'])[0], 5)
-        scores['sigma_perp'] = round(np.nanstd(d_perp), 5)
+        scores['sigma_perp'] = round(np.nanstd(d_perp) / sigma_truth, 5) 
         for _scorer in [r2_score, explained_variance_score, mean_squared_error]:
             scores[_scorer.__name__] = float(_scorer(data[pred],
                                                data[f'{pred}_pred'], multioutput='raw_values'))
+        scores['mean_squared_error'] /= sigma_truth
         err = err.append(scores, ignore_index=True) 
 
         # Making the joint plots
@@ -124,16 +126,16 @@ if __name__ == '__main__':
         g.figure.axes[1].set_yticks([0.1])
         g.figure.axes[2].set_xticks([0.1])
 
-        annotation = r'$\sigma_\perp = $'\
+        annotation = r'$\sigma_{\perp,\ {\rm norm}} = $'\
                      f' {scores["sigma_perp"]:.2f}\n'\
                      r'$\rho_r = $'\
                      f' {scores["Pearson"]:.2f}\n'\
-                     r'${\rm MSE} = $'\
+                     r'${\rm MSE}_{\rm\ norm} = $'\
                      f' {scores["mean_squared_error"]:.2f}'\
                      #r'$f_{\leq 0.2 \rm dex} = $'\
                      #f' {diff_within:.2f}'\
 
-        g.figure.axes[0].text(0.66, 0.05, annotation, transform=g.figure.axes[0].transAxes)
+        g.figure.axes[0].text(0.6, 0.05, annotation, transform=g.figure.axes[0].transAxes)
 
         cax = g.figure.add_axes([x_dict[pred][lines.index(line)], .6, .02, .2])
         cbar = g.figure.colorbar(mpl.cm.ScalarMappable(norm=g.figure.axes[0].collections[0].norm, cmap=g.figure.axes[0].collections[0].cmap),
