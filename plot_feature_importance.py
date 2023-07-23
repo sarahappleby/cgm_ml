@@ -20,7 +20,7 @@ from scipy.stats import pearsonr
 np.random.seed(1)
 
 plt.rc('text', usetex=True)
-plt.rc('font', family='serif', size=14)
+plt.rc('font', family='serif', size=16)
 
 if __name__ == '__main__':
 
@@ -113,14 +113,20 @@ if __name__ == '__main__':
             g = sns.heatmap(importance_use, mask=mask, cmap=cmap, vmax=1, vmin=0, annot=False, ax=ax[p], square=True, linewidths=.5,
                             cbar=False)
 
-        g.figure.axes[p].set_xticklabels(features_pretty, rotation='vertical', fontsize=13)
-        g.figure.axes[p].set_yticklabels(features_pretty, rotation='horizontal', fontsize=13)
+        g.figure.axes[p].set_xticklabels(features_pretty, rotation='vertical', fontsize=15)
 
         g.figure.axes[p].set_xlabel('Removed feature')
         if p == 0:
             g.figure.axes[p].set_ylabel('Remaining features')
+            g.figure.axes[p].set_yticklabels(features_pretty, rotation='horizontal', fontsize=15)
+        else:
+            g.figure.axes[p].set_yticklabels(['']*len(features), rotation='horizontal', fontsize=15)
+
 
         g.figure.axes[p].set_title(predictors_pretty[p])
 
+        g.figure.axes[p].tick_params(left=False, bottom=False) ## other options are right and top
+
+    fig.subplots_adjust(wspace=0.1) 
     plt.savefig(f'plots/{model}_{wind}_{snap}_{lines_short[lines.index(line)]}_lines_RF_importance.png')
     plt.close()

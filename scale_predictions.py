@@ -23,7 +23,7 @@ rng = np.random.RandomState(0)
 np.random.seed(1)
 
 plt.rc('text', usetex=True)
-plt.rc('font', family='serif', size=16)
+plt.rc('font', family='serif', size=12)
 
 
 def gauss(x, A, mu, sigma):
@@ -118,7 +118,7 @@ if __name__ == '__main__':
         data[f'{pred}_pred'] = predictor_scaler.inverse_transform(prediction.reshape(-1, 1)).reshape(len(prediction))
         data[pred] = np.array(df_full[pred])[~train]
         
-        err_pred = get_scores(err_pred, data, pred, reference='', compare='_pred')
+        err_pred = get_scores(err_pred, data, pred, points, reference='', compare='_pred')
 
         # Add extra scatter to the predictions with a width set by the difference in the truth and predicted distributions.
         # We don't do the additional scatter for metallicity because it is not normally distributed.
@@ -154,7 +154,7 @@ if __name__ == '__main__':
         data[f'{pred}_trans_inv'] = qt.inverse_transform(data[[f'{pred}_trans', f'{pred}_trans']])[:, 0]
         data = data.drop(columns=[f'{pred}_trans'])
 
-        err_trans = get_scores(err_trans, data, pred, reference='', compare='_trans_inv')
+        err_trans = get_scores(err_trans, data, pred, points, reference='', compare='_trans_inv')
 
         ks_pred = kstest(data[f'{pred}_pred'], data[f'{pred}'])
         ks_scatter = kstest(data[f'{pred}_scatter'], data[f'{pred}'])
@@ -188,7 +188,7 @@ if __name__ == '__main__':
                    label='Truth')
 
         if p == 0:
-            ax[p].legend(fontsize=13.5, loc=2, framealpha=0.2)
+            ax[p].legend(fontsize=12, loc=2, framealpha=0.2)
             ax[p].set_ylim(0, 0.9)
             ax[0].set_xlim(-0.5, )
         ax[p].set_xlabel(xlabels[p])

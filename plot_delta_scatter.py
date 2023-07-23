@@ -20,7 +20,7 @@ from scipy.stats import pearsonr
 np.random.seed(1)
 
 plt.rc('text', usetex=True)
-plt.rc('font', family='serif', size=14)
+plt.rc('font', family='serif', size=16)
 
 
 def get_prediction_scatter(data, predicted_data, points):
@@ -133,11 +133,11 @@ if __name__ == '__main__':
             j = 0
 
     for i in range(2):
-        ax[i][0].set_yticklabels(predictors_pretty, rotation='horizontal', fontsize=13)
+        ax[i][0].set_yticklabels(predictors_pretty, rotation='horizontal', fontsize=15)
         ax[i][0].set_ylabel('Target')
 
     for j in range(3):
-        ax[1][j].set_xticklabels(features_pretty, rotation='vertical', fontsize=13)
+        ax[1][j].set_xticklabels(features_pretty, rotation='vertical', fontsize=15)
         ax[1][j].set_xlabel('Removed feature')
 
     fig.subplots_adjust(wspace=0.1, hspace=-0.35)

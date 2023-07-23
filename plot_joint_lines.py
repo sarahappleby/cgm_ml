@@ -16,7 +16,7 @@ from scipy.stats import pearsonr
 from sklearn.metrics import r2_score, explained_variance_score, mean_squared_log_error, mean_squared_error
 
 plt.rc('text', usetex=True)
-plt.rc('font', family='serif', size=16)
+plt.rc('font', family='serif', size=19.5)
 
 
 if __name__ == '__main__':
@@ -60,6 +60,11 @@ if __name__ == '__main__':
     x_dict['delta_rho'] = [0.18, 0.2, 0.2, 0.18, 0.18, 0.18]
     x_dict['T'] = [0.18, 0.18, 0.18, 0.18, 0.18, 0.2]
     x_dict['Z'] = [0.18, 0.23, 0.23, 0.23, 0.23, 0.23]
+
+    t_dict = {}
+    t_dict['delta_rho'] = [0.52, 0.51, 0.51, 0.51, 0.51, 0.51]
+    t_dict['T'] = [0.51, 0.51, 0.51, 0.51, 0.51, 0.505]
+    t_dict['Z'] = [0.51, 0.475, 0.475, 0.475, 0.475, 0.475]
 
     diff = {pred: None for pred in predictors}
     data = pd.DataFrame()
@@ -121,7 +126,7 @@ if __name__ == '__main__':
                           marginal_ticks=True, marginal_kws=dict(bins=bins, fill=False, stat='probability'))
 
         g.figure.axes[0].plot(bins, bins, ls=':', lw=2, c='k')
-        g.set_axis_labels(xlabel=xlabels[p], ylabel=ylabels[p])
+        g.set_axis_labels(xlabel=xlabels[p], ylabel=ylabels[p], fontsize=20)
 
         g.figure.axes[1].set_yticks([0.1])
         g.figure.axes[2].set_xticks([0.1])
@@ -135,7 +140,8 @@ if __name__ == '__main__':
                      #r'$f_{\leq 0.2 \rm dex} = $'\
                      #f' {diff_within:.2f}'\
 
-        g.figure.axes[0].text(0.6, 0.05, annotation, transform=g.figure.axes[0].transAxes)
+        g.figure.axes[0].text(t_dict[pred][lines.index(line)], 0.05, annotation, transform=g.figure.axes[0].transAxes, 
+                              bbox=dict(boxstyle="round", fc="w", edgecolor='gray'))
 
         cax = g.figure.add_axes([x_dict[pred][lines.index(line)], .6, .02, .2])
         cbar = g.figure.colorbar(mpl.cm.ScalarMappable(norm=g.figure.axes[0].collections[0].norm, cmap=g.figure.axes[0].collections[0].cmap),

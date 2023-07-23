@@ -16,7 +16,7 @@ from scipy.stats import pearsonr
 from sklearn.metrics import r2_score, explained_variance_score, mean_squared_log_error, mean_squared_error
 
 plt.rc('text', usetex=True)
-plt.rc('font', family='serif', size=16)
+plt.rc('font', family='serif', size=20)
 
 
 def get_dperp(data, pred, points, reference='', compare='_pred'):
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     min_delta = [0, 2, 2, 1.5, 1, 0.5]
     max_delta = [4, 4, 4, 4, 3.5, 3.5]
     min_T = [3, 3.5, 4, 4, 4, 4]
-    max_T = [6, 5, 5, 5, 5.5, 6]
+    max_T = [6, 5, 5.25, 5, 5.5, 6]
 
     plot_dir = './plots/'
     model_dir = './models/'
@@ -151,7 +151,7 @@ if __name__ == '__main__':
         #                     ylabel=r'${\rm log } (T / {\rm K})$')
 
         if line == 'MgII2796':
-            cax = grid.figure.add_axes([0.25, .73, .5, .025])
+            cax = grid.figure.add_axes([0.27, .73, .5, .025])
             cbar = grid.figure.colorbar(mpl.cm.ScalarMappable(norm=grid.ax_joint.collections[-1].norm, cmap=grid.ax_joint.collections[-1].cmap),
                                         cax=cax, orientation='horizontal')
             cbar.set_label(r'${\rm log} \sigma_{\rm phase}$')
@@ -160,7 +160,7 @@ if __name__ == '__main__':
         
         if line == 'CII1334':
             hist_lines = [Line2D([0,1],[0,1], color=color, ls='-', lw=1) for color in [truth_color, pred_color]]
-            leg = grid.ax_joint.legend(hist_lines, hist_labels, loc=1, fontsize=15)
+            leg = grid.ax_joint.legend(hist_lines, hist_labels, loc=1, fontsize=18)
             grid.ax_joint.add_artist(leg)
 
         grid.ax_joint.annotate(plot_lines[lines.index(line)], xy=(x[lines.index(line)], 0.06), xycoords='axes fraction', 
